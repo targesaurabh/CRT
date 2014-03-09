@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	
+	<script type="text/javascript" src="/static/jquery-1.7.1.min.js"></script>
+	<script type="text/javascript">
+		var baseurl=location.protocol+'//'+location.host+'/';
+		var user_id, access_token;
+		var pageId;
+		$(document).ready(function(){
+
+
+			window.fbAsyncInit = function() {
+				
+				FB.init({
+					appId      : '187315198124554', // App ID
+					channelUrl : baseurl+'channel.html', // Channel File
+					status     : true, // check login status
+					cookie     : true, // enable cookies to allow the server to access the session
+					xfbml      : true  // parse XFBML
+				});
+				 			 
+
+				FB.Event.subscribe('auth.authResponseChange', function(response) {    				
+					    if (response.status === 'connected') {				    	
+					    	user_id = response.authResponse.userID;
+					    	access_token = response.authResponse.accessToken;
+					    	console.log('in authresponse:   '+access_token);				    	
+						}else if (response.status === 'not_authorized') {
+					    		FB.login(function(response){if(response.authResponse){}})			  	
+					 	} else {					 	
+								FB.login(function(response){if(response.authResponse){}});		  	
+					    }
+	  			});	
+
+	  			FB.getLoginStatus(function(response) {
+
+				    if (response.status === 'connected') {				    	
+				    	user_id = response.authResponse.userID;
+				    	access_token = response.authResponse.accessToken;
+				    	console.log('in getstatus:   '+access_token);					    		   
+				  
+				    } else if (response.status === 'not_authorized') {
+				    		FB.login(function(response){if(response.authResponse){}});				    					    	
+				 	} else {					 	
+							FB.login(function(response){if(response.authResponse){}});			 
+				    }				   
+			  });	  					   
+			};
+
+
+			(function(d, s, id) {
+			  var js, fjs = d.getElementsByTagName(s)[0];
+			  if (d.getElementById(id)) return;
+			  js = d.createElement(s); js.id = id;
+			  js.src = "//connect.facebook.net/en_US/all.js";
+			  fjs.parentNode.insertBefore(js, fjs);
+			}(document, 'script', 'facebook-jssdk'));
+
+		});
+
+	
+	function submitPage(){
+
+	
+			FB.api($('#pid').val(),function(response){
+				pageId = response.id;
+				$("#msg").text('Wait..fetching data..');	
+				$.ajax({
+		            url : '/getPosts',                         
+		            data:{pid : pageId, access_token : access_token, pageName : $('#pid').val()},
+		            type : "Post",
+		            timeout:120000
+		    //         success : function(data){
+		    //         	console.log('result from getPosts');		            	
+		    //         	// $("#msg").text('Wait..Generating csv file..');	
+		    //         	$("#msg").text('Done');	
+						// $('#msg').append('<br><a href="http://feed.staging.viralmint.com/static/csvFiles/'+$('#pid').val()+'.csv">'+ $('#pid').val()+'.csv</a>')	;
+		    //   //       	$.ajax({
+				  //   //         url : '/csvFile',                         
+				  //   //         data:{ pageId : pageId , pageName : $('#pid').val()},
+				  //   //         type : "Post",	                
+				  //   //         success : function(data){																
+						// 		// // $('#submit').hide();
+						// 		// $("#msg").text('Done');	
+						// 		// $('#msg').append('<br><a href="http://feed.staging.viralmint.com/static/csvFiles/'+$('#pid').val()+'.csv">'+ $('#pid').val()+'.csv</a>')	;
+				  //   //         }
+				  //   //     });
+						// // $('#submit').hide();
+						// // $('#generate').show();	
+		    //         }
+		        }).done(function(response) {
+		        	console.log(response);
+				 //    alert( "success" );
+				 //    $("#msg").text('Done');	
+					// $('#msg').append('<br><a href="http://feed.staging.viralmint.com/static/csvFiles/'+$('#pid').val()+'.csv">'+ $('#pid').val()+'.csv</a>')	;
+				  })
+				  .fail(function(jqXHR, textStatus){
+				  		console.log(jqXHR);
+				  		console.log(textStatus);
+				  		$("#msg").text('Error occured.');
+					    if(textStatus == 'timeout')
+					    {     
+					        alert('Failed from timeout'); 					        
+					    }
+					});
+		        var t, previousCount=0;
+        		t = setInterval(function(){
+        			$.ajax({
+			            url : '/checkStatus',                         
+			            data:{pageId : pageId, previousCount : previousCount},
+			            type : "Post",	                
+			            success : function(data){
+			            	console.log(data);
+			            	if(data=='True'){			            		
+				            	$("#msg").text('Done!!!');
+								$('#submit').hide();
+								$('#msg').append('<br><a href="http://feed.staging.viralmint.com/static/csvFiles/'+$('#pid').val()+'.csv">'+ $('#pid').val()+'.csv</a>')	;
+								clearInterval(t);	
+			            	}else{
+			            		$("#msg").text('Fetched ID count : '+data);	
+			            		previousCount = parseInt(data);
+			            		// console.log(previousCount);		            		
+			            	}			            						            				
+			            }
+		        	});
+	        	},10000);    
+			});
+					
+	}
+
+	// function genFile(){		
+	// 	$("#msg").text('Wait..Generating csv file..');	
+	// 	$.ajax({
+ //            url : '/csvFile',                         
+ //            data:{ pageId : pageId , pageName : $('#pid').val()},
+ //            type : "Post",	                
+ //            success : function(data){
+	// 			$("#msg").text('Done!!!');
+	// 			$('#submit').hide();
+	// 			$('#msg').append('<br><a href="http://feed.staging.viralmint.com/static/csvFiles/'+$('#pid').val()+'.csv">'+ $('#pid').val()+'.csv</a>')	;
+ //            }
+ //        });
+	// }
+	</script>
+</head>
+<body>
+<div id="fb-root"></div>
+<!-- 
+8062627951 techcrunch
+196980197066236 XYZPodgorica
+367505686669547 viralmintapp
+ -->
+Enter Page Name<input id="pid" type="text" value=""></input><br>
+<button onclick="submitPage()" id="submit">Submit</button>
+<button onclick="genFile()" id="generate" style="display:none;">Generate File</button>
+<div id='msg'></div>
+</body>
+</html>
